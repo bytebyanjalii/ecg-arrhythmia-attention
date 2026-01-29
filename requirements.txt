@@ -1,0 +1,19 @@
+# Data handling
+pandas
+numpy
+
+# ECG signal processing
+wfdb
+
+# Machine learning / deep learning
+torch
+torchvision
+torchaudio
+scikit-learn
+
+# Plotting & visualization
+matplotlib
+seaborn
+
+# Optional (if you use tqdm in training loops)
+tqdm
