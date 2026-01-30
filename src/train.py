@@ -131,3 +131,46 @@ model_save_path = "checkpoints/final_model.pth"
 torch.save(model.state_dict(), model_save_path)
 print(f"Model saved to {model_save_path}")
 
+
+
+from sklearn.metrics import classification_report, f1_score
+import os
+
+print(f"Test Accuracy: {accuracy:.2f}%")
+# ===== F1 SCORE CALCULATION =====
+model.eval()
+
+y_true = []
+y_pred = []
+
+with torch.no_grad():
+    for inputs, labels in test_loader:
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+
+        outputs = model(inputs)
+        _, preds = torch.max(outputs, 1)
+
+        y_true.extend(labels.cpu().numpy())
+        y_pred.extend(preds.cpu().numpy())
+
+# F1 Scores
+f1_macro = f1_score(y_true, y_pred, average='macro')
+f1_weighted = f1_score(y_true, y_pred, average='weighted')
+
+print(f"Macro F1-score: {f1_macro:.4f}")
+print(f"Weighted F1-score: {f1_weighted:.4f}")
+
+# Full classification report
+report = classification_report(y_true, y_pred)
+print("\nClassification Report:\n", report)
+
+# ===== SAVE RESULTS =====
+os.makedirs("results", exist_ok=True)
+
+with open("results/cnn1d_results.txt", "w") as f:
+    f.write(f"Test Accuracy: {accuracy:.2f}%\n")
+    f.write(f"Macro F1-score: {f1_macro:.4f}\n")
+    f.write(f"Weighted F1-score: {f1_weighted:.4f}\n\n")
+    f.write(report)
+
