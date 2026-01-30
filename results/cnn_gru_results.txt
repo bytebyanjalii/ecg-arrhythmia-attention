@@ -1,0 +1,15 @@
+Test Accuracy: 97.84%
+Macro F1-score: 0.8800
+Weighted F1-score: 0.9775
+
+              precision    recall  f1-score   support
+
+           0       0.98      1.00      0.99     18117
+           1       0.87      0.68      0.77       556
+           2       0.96      0.92      0.94      1448
+           3       0.83      0.64      0.72       162
+           4       1.00      0.97      0.98      1608
+
+    accuracy                           0.98     21891
+   macro avg       0.93      0.84      0.88     21891
+weighted avg       0.98      0.98      0.98     21891
