@@ -58,3 +58,6 @@ class PositionalEncoding(nn.Module):
         # x: [batch, seq_len, d_model]
         x = x + self.pe[:, :x.size(1), :]
         return self.dropout(x)
+
+# Alias for compatibility
+ECGTransformer = TransformerModel

@@ -1,127 +1,131 @@
-# ----------------------------Step 1: Import libraries and set device---------------------------------
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-import pandas as pd
+
 import numpy as np
-import os
+from sklearn.metrics import accuracy_score, f1_score, classification_report
 
-# ----------------------------Step 2: Import your models---------------------------------
+from src.datasets import load_data
+from src.models.cnn1d import CNN1D
 from src.models.cnn_gru import CNN_GRU
-from src.models.transformer import TransformerModel
+from src.models.transformer import ECGTransformer
+from src.models.cnn_bilstm_attn import CNN_BiLSTM_Attention
 
-# ----------------------------Step 3: Set device---------------------------------
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print("Using device:", device)
 
-# ----------------------------Step 4: Choose model---------------------------------
-# Options: 'cnn_gru', 'transformer'
-model_choice = 'transformer'  # change here to 'cnn_gru' if you want
-
-# ----------------------------Step 5: Load CSVs and create tensors---------------------------------
-train_df = pd.read_csv('data/mitdb_new/mitbih_train.csv')
-test_df = pd.read_csv('data/mitdb_new/mitbih_test.csv')
-
-X_train = train_df.iloc[:, :-1].values
-y_train = train_df.iloc[:, -1].values
-X_test = test_df.iloc[:, :-1].values
-y_test = test_df.iloc[:, -1].values
-
-X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
-y_train_tensor = torch.tensor(y_train, dtype=torch.long)
-X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
-y_test_tensor = torch.tensor(y_test, dtype=torch.long)
-
+# =======================
+# CONFIG
+# =======================
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+epochs = 20
+learning_rate = 1e-3
 batch_size = 64
-train_loader = DataLoader(TensorDataset(X_train_tensor, y_train_tensor), batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(TensorDataset(X_test_tensor, y_test_tensor), batch_size=batch_size, shuffle=False)
 
-print("DataLoaders ready. Train batches:", len(train_loader), "Test batches:", len(test_loader))
+model_choice = "cnn_bilstm_attn"
+# "cnn1d", "cnn_gru", "transformer", "cnn_bilstm_attn"
 
-# ----------------------------Step 6: Initialize model, loss, optimizer---------------------------------
-num_classes = len(set(y_train))
 
-if model_choice == 'cnn_gru':
-    model = CNN_GRU(num_classes=num_classes).to(device)
-elif model_choice == 'transformer':
-    model = TransformerModel(input_dim=X_train_tensor.shape[1], num_classes=num_classes).to(device)
+# =======================
+# LOAD DATA
+# =======================
+X_train, X_test, y_train, y_test = load_data()
+
+X_train = torch.tensor(X_train, dtype=torch.float32)
+X_test = torch.tensor(X_test, dtype=torch.float32)
+y_train = torch.tensor(y_train, dtype=torch.long)
+y_test = torch.tensor(y_test, dtype=torch.long)
+
+train_ds = TensorDataset(X_train, y_train)
+test_ds = TensorDataset(X_test, y_test)
+
+train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+
+num_classes = len(np.unique(y_train))
+
+
+# =======================
+# MODEL SELECTION
+# =======================
+if model_choice == "cnn1d":
+    model = CNN1D(input_dim=X_train.shape[1], num_classes=num_classes)
+
+elif model_choice == "cnn_gru":
+    model = CNN_GRU(input_dim=X_train.shape[1], num_classes=num_classes)
+
+elif model_choice == "transformer":
+    model = ECGTransformer(input_dim=X_train.shape[1], num_classes=num_classes)
+
+elif model_choice == "cnn_bilstm_attn":
+    model = CNN_BiLSTM_Attention(num_classes=num_classes)
+
 else:
-    raise ValueError("Invalid model_choice. Choose 'cnn_gru' or 'transformer'.")
+    raise ValueError("Invalid model choice")
 
+model.to(device)
+
+
+# =======================
+# TRAINING
+# =======================
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-print(f"Model ({model_choice}) initialized.")
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-# ----------------------------Step 7: Training Loop---------------------------------
-num_epochs = 20
-print_every = 100
-
-for epoch in range(num_epochs):
+for epoch in range(epochs):
     model.train()
     running_loss = 0.0
 
-    for i, (inputs, labels) in enumerate(train_loader):
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        if model_choice == 'transformer' and inputs.dim() == 2:
-            inputs = inputs.unsqueeze(-1)  # transformer expects [batch, seq_len, feature_dim]
+    for x_batch, y_batch in train_loader:
+        x_batch = x_batch.to(device)
+        y_batch = y_batch.to(device)
 
         optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
+        outputs = model(x_batch)
+        loss = criterion(outputs, y_batch)
         loss.backward()
         optimizer.step()
 
         running_loss += loss.item()
-        if (i + 1) % print_every == 0:
-            print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {running_loss/print_every:.4f}")
-            running_loss = 0.0
 
-print("Training complete!")
+    print(f"Epoch [{epoch+1}/{epochs}] Loss: {running_loss/len(train_loader):.4f}")
 
-# ----------------------------Step 8: Evaluation & F1 Scores---------------------------------
+
+# =======================
+# EVALUATION
+# =======================
 model.eval()
 y_true, y_pred = [], []
 
 with torch.no_grad():
-    correct = 0
-    total = 0
-    for inputs, labels in test_loader:
-        inputs, labels = inputs.to(device), labels.to(device)
-        if model_choice == 'transformer' and inputs.dim() == 2:
-            inputs = inputs.unsqueeze(-1)
-        outputs = model(inputs)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-        y_true.extend(labels.cpu().numpy())
-        y_pred.extend(predicted.cpu().numpy())
+    for x_batch, y_batch in test_loader:
+        x_batch = x_batch.to(device)
+        outputs = model(x_batch)
+        preds = torch.argmax(outputs, dim=1)
 
-accuracy = 100 * correct / total
-print(f"Test Accuracy: {accuracy:.2f}%")
+        y_true.extend(y_batch.numpy())
+        y_pred.extend(preds.cpu().numpy())
 
-from sklearn.metrics import classification_report, f1_score
-f1_macro = f1_score(y_true, y_pred, average='macro')
-f1_weighted = f1_score(y_true, y_pred, average='weighted')
-print(f"Macro F1-score: {f1_macro:.4f}")
-print(f"Weighted F1-score: {f1_weighted:.4f}")
-report = classification_report(y_true, y_pred)
-print("\nClassification Report:\n", report)
+acc = accuracy_score(y_true, y_pred)
+macro_f1 = f1_score(y_true, y_pred, average="macro")
+weighted_f1 = f1_score(y_true, y_pred, average="weighted")
 
-# ----------------------------Step 9: Save Model & Results---------------------------------
-os.makedirs("checkpoints", exist_ok=True)
-os.makedirs("results", exist_ok=True)
+print("\nTest Accuracy:", acc)
+print("Macro F1:", macro_f1)
+print("Weighted F1:", weighted_f1)
+print("\nClassification Report:\n")
+print(classification_report(y_true, y_pred))
 
-model_save_path = f"checkpoints/{model_choice}_model.pth"
-torch.save(model.state_dict(), model_save_path)
-print(f"Model saved to {model_save_path}")
 
-results_path = f"results/{model_choice}_results.txt"
-with open(results_path, "w") as f:
-    f.write(f"Test Accuracy: {accuracy:.2f}%\n")
-    f.write(f"Macro F1-score: {f1_macro:.4f}\n")
-    f.write(f"Weighted F1-score: {f1_weighted:.4f}\n\n")
-    f.write(report)
+# =======================
+# SAVE
+# =======================
+torch.save(model.state_dict(), f"checkpoints/{model_choice}_model.pth")
 
-print(f"Results saved to {results_path}")
+with open(f"results/{model_choice}_results.txt", "w") as f:
+    f.write(f"Accuracy: {acc}\n")
+    f.write(f"Macro F1: {macro_f1}\n")
+    f.write(f"Weighted F1: {weighted_f1}\n\n")
+    f.write(classification_report(y_true, y_pred))
+
+print(f"\n✅ Saved model & results for {model_choice}")
+
