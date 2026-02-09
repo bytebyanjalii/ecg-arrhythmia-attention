@@ -59,33 +59,7 @@ ECG Signal Input
 
 6. Project Structure
 
-ecg-arrhythmia-attention/
-│
-├── src/
-│   ├── datasets.py
-│   ├── train.py
-│   ├── test_load.py
-│   ├── models/
-│   │   ├── cnn1d.py
-│   │   ├── cnn_gru.py
-│   │   ├── transformer.py
-│   │   ├── cnn_attention.py
-│   │   └── cnn_bilstm_attention.py
-│   ├── plot_confusion_matrices.py
-│   ├── plot_roc_curves.py
-│   ├── plot_attention_weights.py
-│   ├── classwise_recall_table.py
-│   └── final_results_table.py
-│
-├── figures/
-│   ├── confusion_matrices/
-│   ├── roc_curves/
-│   ├── attention_weights/
-│   └── classwise_recall_table.csv
-│
-├── final_results_table.csv
-├── requirements.txt
-└── README.md
+
 
 7. Evaluation Metrics
 The models are evaluated using:
