@@ -58,10 +58,12 @@ ECG Signal Input
 - Best-performing model in this project
 
 6. Project Structure
+   ![Project Structure](Project%20Structure.png)
 
 
 
-7. Evaluation Metrics
+
+8. Evaluation Metrics
 The models are evaluated using:
 - Accuracy
 - Macro ROC-AUC
