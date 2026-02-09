@@ -74,12 +74,8 @@ The models are evaluated using:
 
 8. Final Results Summary
 
-Model               Accuracy   Macro AUC   Weighted F1  
-CNN1D               0.9816     0.9871      0.9810  
-CNN-GRU             0.9784     0.9855      0.9775  
-Transformer         0.9762     0.9874      0.9755  
-CNN-Attention       0.9542     0.9569      0.9492  
-CNN-BiLSTM-Attn     0.9820     0.9917      0.9813  
+![Result Table](Result%20Table.png)
+
 
 9. Attention Weight Visualization
 Attention-based models generate attention weight plots that show which parts of the ECG signal contributed most to the prediction. This:
