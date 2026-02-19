@@ -1,0 +1,26 @@
+import os
+import matplotlib.pyplot as plt
+import numpy as np
+
+RESULTS_DIR = "results"
+FIG_DIR = "figures/model_comparison"
+
+os.makedirs(FIG_DIR, exist_ok=True)
+
+models = [
+    "cnn1d",
+    "cnn_gru",
+    "transformer",
+    "cnn_attention",
+    "cnn_bilstm_attn"
+]
+
+accuracies = []
+macro_f1 = []
+weighted_f1 = []
+used_models = []
+
+def extract_metric(text, key, percent=False):
+    for line in text.splitlines():
+        if key in line:
+            value = line.split(":")

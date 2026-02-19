@@ -1,5 +1,4 @@
-# Generated figures
-figures/
+
 # Python cache
 __pycache__/
 *.pyc
@@ -9,4 +8,3 @@ __pycache__/
 
 # Local data (already handled)
 data/
-
